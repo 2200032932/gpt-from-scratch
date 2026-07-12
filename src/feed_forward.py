@@ -1,0 +1,180 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from pathlib import Path
+
+
+project_root = Path(__file__).resolve().parent.parent
+file_path = project_root / "data" / "input.txt"
+
+with open(file_path, "r", encoding="utf-8") as file:
+    text = file.read()
+
+chars = sorted(list(set(text)))
+
+
+stoi = {ch: i for i, ch in enumerate(chars)}
+itos = {i: ch for i, ch in enumerate(chars)}
+
+def encode(s):
+    return [stoi[c] for c in s]
+
+encoded_text = encode(text)
+
+data = torch.tensor(encoded_text, dtype=torch.long)
+
+block_size = 8
+embedding_dim = 32
+
+x = data[:block_size]
+
+
+
+token_embedding = nn.Embedding(
+    len(stoi),
+    embedding_dim
+)
+
+token_vectors = token_embedding(x)
+
+positions = torch.arange(block_size)
+
+
+position_embedding = nn.Embedding(
+    block_size,
+    embedding_dim
+)
+
+position_vectors = position_embedding(positions)
+
+
+final_embeddings = token_vectors + position_vectors
+num_heads = 4
+head_size = embedding_dim // num_heads
+
+
+class FeedForward(nn.Module):
+
+    def __init__(self, embedding_dim):
+        super().__init__()
+
+        self.net = nn.Sequential(
+
+            nn.Linear(
+                embedding_dim,
+                embedding_dim * 4
+            ),
+
+            nn.ReLU(),
+
+            nn.Linear(
+                embedding_dim * 4,
+                embedding_dim
+            )
+
+        )
+
+    def forward(self, x):
+        return self.net(x)
+    
+
+
+
+class Head(nn.Module):
+
+    def __init__(self, embedding_dim, head_size):
+        super().__init__()
+
+        self.query = nn.Linear(
+            embedding_dim,
+            head_size,
+            bias=False
+        )
+
+        self.key = nn.Linear(
+            embedding_dim,
+            head_size,
+            bias=False
+        )
+
+        self.value = nn.Linear(
+            embedding_dim,
+            head_size,
+            bias=False
+        )
+
+    def forward(self, x):
+
+        Q = self.query(x)
+        K = self.key(x)
+        V = self.value(x)
+
+        scores = Q @ K.transpose(-2, -1)
+
+        scores = scores / (head_size ** 0.5)
+
+        mask = torch.tril(torch.ones(
+            x.size(0),
+            x.size(0)
+        ))
+
+        scores = scores.masked_fill(
+            mask == 0,
+            float("-inf")
+        )
+
+        weights = F.softmax(
+            scores,
+            dim=-1
+        )
+
+        out = weights @ V
+
+        return out
+head1 = Head(
+    embedding_dim,
+    head_size
+)
+
+head2 = Head(
+    embedding_dim,
+    head_size
+)
+
+head3 = Head(
+    embedding_dim,
+    head_size
+)
+
+head4 = Head(
+    embedding_dim,
+    head_size
+)
+
+out1 = head1(final_embeddings)
+out2 = head2(final_embeddings)
+out3 = head3(final_embeddings)
+out4 = head4(final_embeddings)
+
+combined = torch.cat(
+    [
+        out1,
+        out2,
+        out3,
+        out4
+    ],
+    dim=-1
+)
+
+
+projection = nn.Linear(
+    embedding_dim,
+    embedding_dim
+)
+
+output = projection(combined)
+
+ffn = FeedForward(embedding_dim)
+
+ffn_output = ffn(output)
+
