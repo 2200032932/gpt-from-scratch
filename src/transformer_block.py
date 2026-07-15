@@ -224,8 +224,7 @@ class MultiHeadAttention(nn.Module):
 
 
 
-block = TransformerBlock(embedding_dim)
-
-result = block(final_embeddings)
-
-print(result.shape)
+if __name__ == "__main__":
+    block = TransformerBlock(embedding_dim)
+    result = block(final_embeddings)
+    print(result.shape)
