@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from pathlib import Path
 from transformer_block import TransformerBlock
+import torch.nn.functional as F
 
 
 project_root = Path(__file__).resolve().parent.parent
@@ -63,7 +64,7 @@ class GPT(nn.Module):
             vocab_size
         )
 
-    def forward(self, idx):
+    def forward(self, idx, targets=None):
         B, T = idx.shape
 
         token_embeddings = self.token_embedding(idx)
@@ -80,7 +81,17 @@ class GPT(nn.Module):
 
         logits = self.lm_head(x)
 
-        return logits     
+        loss = None
+
+        if targets is not None:
+
+            logits = logits.view(-1, vocab_size)
+            targets = targets.view(-1)
+    
+
+            loss = F.cross_entropy(logits, targets)
+
+        return logits, loss   
 
 
 if __name__ == "__main__":
@@ -88,7 +99,9 @@ if __name__ == "__main__":
     model = GPT()
 
     idx = data[:block_size].unsqueeze(0)
+    targets = data[1:block_size + 1].unsqueeze(0)
+    logits, loss = model(idx, targets)
 
-    logits = model(idx)
+    print("Logits Shape:", logits.shape)
 
-    print(logits.shape)    
+    print("Loss:", loss.item())
