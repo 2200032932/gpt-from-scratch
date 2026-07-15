@@ -64,6 +64,25 @@ class GPT(nn.Module):
             vocab_size
         )
 
+    def generate(self, idx, max_new_tokens):
+
+        for _ in range(max_new_tokens):
+
+            idx_cond = idx[:, -block_size:]
+
+            logits, _ = self(idx_cond)
+
+            logits = logits[:, -1, :]
+
+            probs = F.softmax(logits, dim=-1)
+
+            next_token = torch.multinomial(probs, num_samples=1)
+
+            idx = torch.cat((idx, next_token), dim=1)
+
+        return idx
+
+
     def forward(self, idx, targets=None):
         B, T = idx.shape
 
@@ -93,6 +112,8 @@ class GPT(nn.Module):
 
         return logits, loss   
 
+    def decode(tokens):
+        return "".join([itos[i] for i in tokens])
 
 if __name__ == "__main__":
 

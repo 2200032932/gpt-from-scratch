@@ -1,7 +1,10 @@
 import torch
 import torch.optim as optim
 
-from gpt_model import GPT, data, block_size
+from gpt_model import GPT, data, block_size, itos
+
+def decode(tokens):
+    return "".join([itos[i] for i in tokens])
 
 batch_size = 32
 max_iters = 5000
@@ -49,3 +52,13 @@ for iter in range(max_iters):
 
     if iter % eval_interval == 0:
         print(f"Iteration {iter} | Loss: {loss.item():.4f}")
+
+        context = torch.zeros((1, 1), dtype=torch.long)
+
+generated = model.generate(
+    context,
+    max_new_tokens=300
+)
+
+print()
+print(decode(generated[0].tolist()))
