@@ -106,7 +106,7 @@ class Head(nn.Module):
 
     def __init__(self, embedding_dim, head_size):
         super().__init__()
-
+        self.head_size = head_size
         self.query = nn.Linear(
             embedding_dim,
             head_size,
@@ -133,12 +133,15 @@ class Head(nn.Module):
 
         scores = Q @ K.transpose(-2, -1)
 
-        self.head_size = head_size
+        
         scores = scores / (self.head_size ** 0.5)
-        mask = torch.tril(torch.ones(
-            x.size(0),
-            x.size(0)
-        ))
+        
+        if x.dim() == 2:
+            T = x.size(0)
+        else:
+            T = x.size(1)
+        mask = torch.tril(torch.ones(T, T, device=x.device))
+        
 
         scores = scores.masked_fill(
             mask == 0,
@@ -153,40 +156,7 @@ class Head(nn.Module):
         out = weights @ V
 
         return out
-head1 = Head(
-    embedding_dim,
-    head_size
-)
 
-head2 = Head(
-    embedding_dim,
-    head_size
-)
-
-head3 = Head(
-    embedding_dim,
-    head_size
-)
-
-head4 = Head(
-    embedding_dim,
-    head_size
-)
-
-out1 = head1(final_embeddings)
-out2 = head2(final_embeddings)
-out3 = head3(final_embeddings)
-out4 = head4(final_embeddings)
-
-combined = torch.cat(
-    [
-        out1,
-        out2,
-        out3,
-        out4
-    ],
-    dim=-1
-)
 
 
 projection = nn.Linear(
