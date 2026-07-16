@@ -62,3 +62,10 @@ generated = model.generate(
 
 print()
 print(decode(generated[0].tolist()))
+
+torch.save(
+    model.state_dict(),
+    "gpt_model.pth"
+)
+
+print("Model saved successfully!")
